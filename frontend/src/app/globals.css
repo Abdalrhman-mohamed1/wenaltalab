@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0A0A0A;
+  --foreground: #FFFFFF;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-arabic), Arial, Helvetica, sans-serif;
+  direction: rtl;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .glow-effect {
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+  }
+  
+  .glow-text {
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  }
+}

@@ -1,0 +1,291 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum Role {
+  ADMIN
+  CUSTOMER
+  DRIVER
+  BUSINESS
+  SUPPORT
+}
+
+enum DeliveryStatus {
+  REQUESTED
+  ASSIGNED
+  DRIVER_EN_ROUTE
+  PICKED_UP
+  IN_TRANSIT
+  NEAR_DESTINATION
+  DELIVERED
+  FAILED
+  CANCELED
+  PENDING
+  ACCEPTED
+  ON_THE_WAY
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  WALLET
+  PAYMOB
+  FAWRY
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  email     String?  @unique
+  password  String
+  firstName String
+  lastName  String
+  role      Role     @default(CUSTOMER)
+  companyName String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  driverProfile Driver?
+  orders        Order[]         @relation("CustomerOrders")
+  businessOrders Order[]        @relation("BusinessOrders")
+  wallet        Wallet?
+  reviews       Review[]        @relation("CustomerReviews")
+  supportTickets SupportTicket[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+model Driver {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  isOnline       Boolean  @default(false)
+  currentLat     Float?
+  currentLng     Float?
+  kycStatus      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  vehicleId      String?  @unique
+  vehicle        Vehicle? @relation(fields: [vehicleId], references: [id])
+  earnings       Float    @default(0.0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  orders         Order[]  @relation("DriverOrders")
+  documents      DriverDocument[]
+  trackings      Tracking[]
+  receivedReviews Review[] @relation("DriverReviews")
+}
+
+model Vehicle {
+  id           String   @id @default(uuid())
+  make         String
+  model        String
+  year         Int
+  licensePlate String   @unique
+  color        String
+  type         String   // MOTORCYCLE, CAR, VAN, TRUCK
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  driver       Driver?
+}
+
+model DriverDocument {
+  id         String   @id @default(uuid())
+  driverId   String
+  driver     Driver   @relation(fields: [driverId], references: [id])
+  type       String   // ID_CARD, DRIVING_LICENSE, VEHICLE_REGISTRATION
+  url        String
+  status     String   @default("PENDING") // PENDING, VERIFIED, REJECTED
+  uploadedAt DateTime @default(now())
+}
+
+model Order {
+  id               String         @id @default(uuid())
+  customerId       String
+  customer         User           @relation("CustomerOrders", fields: [customerId], references: [id])
+  driverId         String?
+  driver           Driver?        @relation("DriverOrders", fields: [driverId], references: [id])
+  businessId       String?
+  business         User?          @relation("BusinessOrders", fields: [businessId], references: [id])
+  status           DeliveryStatus @default(REQUESTED)
+  pickupLat        Float
+  pickupLng        Float
+  pickupAddress    String
+  dropoffLat       Float
+  dropoffLng       Float
+  dropoffAddress   String
+  receiverName     String?
+  receiverPhone    String?
+  packageType      String?
+  notes            String?
+  distanceKm       Float
+  estimatedTimeMin Int
+  totalFare        Float
+  paymentMethod    PaymentMethod
+  paymentStatus    PaymentStatus  @default(PENDING)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  items          OrderItem[]
+  tracking       Tracking[]
+  payment        Payment?
+  coupon         Coupon?        @relation(fields: [couponId], references: [id])
+  couponId       String?
+  review         Review?
+  dispute        Dispute?
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id])
+  description String
+  weightKg    Float?
+  dimensions  String?
+  category    String   // PARCEL, FOOD, DOCUMENTS, SHOPPING
+}
+
+model Tracking {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  driverId  String?
+  driver    Driver?  @relation(fields: [driverId], references: [id])
+  lat       Float
+  lng       Float
+  status    DeliveryStatus
+  timestamp DateTime @default(now())
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id])
+  amount        Float
+  method        PaymentMethod
+  status        PaymentStatus
+  gatewayTxnId  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  balance   Float    @default(0.0)
+  currency  String   @default("EGP")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  walletId  String
+  wallet    Wallet   @relation(fields: [walletId], references: [id])
+  amount    Float
+  type      String   // DEPOSIT, WITHDRAWAL, REFUND, EARNING, DEDUCTION
+  reference String?
+  createdAt DateTime @default(now())
+}
+
+model Coupon {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  discountValue Float
+  discountType  String   // PERCENTAGE, FIXED
+  maxUses       Int?
+  usedCount     Int      @default(0)
+  expiresAt     DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  orders        Order[]
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   // ORDER_UPDATE, PROMO, SYSTEM
+  createdAt DateTime @default(now())
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  subject     String
+  description String
+  status      String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  orderId    String   @unique
+  order      Order    @relation(fields: [orderId], references: [id])
+  customerId String
+  customer   User     @relation("CustomerReviews", fields: [customerId], references: [id])
+  driverId   String
+  driver     Driver   @relation("DriverReviews", fields: [driverId], references: [id])
+  rating     Int      // 1 to 5
+  comment    String?
+  createdAt  DateTime @default(now())
+}
+
+model Dispute {
+  id          String   @id @default(uuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id])
+  reason      String
+  status      String   @default("OPEN")
+  resolution  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PricingRule {
+  id           String   @id @default(uuid())
+  baseFare     Float
+  perKmRate    Float
+  perMinRate   Float
+  surgeMult    Float    @default(1.0)
+  vehicleType  String
+  city         String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+}
