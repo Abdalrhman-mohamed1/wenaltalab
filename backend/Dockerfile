@@ -9,10 +9,9 @@ RUN npm install
 
 COPY . .
 
-ENV DATABASE_URL="postgresql://postgres:postgres@postgres:5432/wenaltalab"
+ENV DATABASE_URL=postgresql://postgres:postgres@postgres:5432/wenaltalab
 
 RUN npx prisma generate
-
 RUN npm run build
 
 # Production Stage
@@ -28,8 +27,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules ./node_modules
 
-ENV DATABASE_URL="postgresql://postgres:postgres@postgres:5432/wenaltalab"
+ENV DATABASE_URL=postgresql://postgres:postgres@postgres:5432/wenaltalab
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main.js"]
