@@ -11,7 +11,7 @@ COPY . .
 
 ENV DATABASE_URL=postgresql://postgres:postgres@postgres:5432/wenaltalab
 
-RUN ./node_modules/.bin/prisma generate
+RUN npx prisma generate
 RUN npm run build
 
 # Production Stage
@@ -25,7 +25,6 @@ RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules ./node_modules
 
 ENV DATABASE_URL=postgresql://postgres:postgres@postgres:5432/wenaltalab
 
