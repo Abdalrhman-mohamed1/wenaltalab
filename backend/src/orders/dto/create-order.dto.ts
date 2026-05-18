@@ -1,5 +1,9 @@
-import { IsString, IsNumber, IsEnum, IsOptional } from 'class-validator';
-import { PaymentMethod } from '@prisma/client';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsIn
+} from 'class-validator';
 
 export class CreateOrderDto {
   @IsString()
@@ -20,8 +24,8 @@ export class CreateOrderDto {
   @IsNumber()
   dropoffLng: number;
 
-  @IsEnum(PaymentMethod)
-  paymentMethod: PaymentMethod;
+  @IsIn(['CASH', 'CARD', 'WALLET', 'PAYMOB', 'FAWRY'])
+  paymentMethod: string;
 
   @IsString()
   itemDescription: string;
