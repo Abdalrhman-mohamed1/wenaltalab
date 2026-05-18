@@ -32,4 +32,4 @@ ENV DATABASE_URL="postgresql://postgres:postgres@postgres:5432/wenaltalab"
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
